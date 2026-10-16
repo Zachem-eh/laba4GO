@@ -29,6 +29,18 @@ type Product struct {
 	BasePrice   float64
 }
 
+func (pr Product) toString() string {
+	return fmt.Sprintf("Название товара: %s\nОписание товара: %s\nЦена на товар: %v",
+		pr.Name, pr.Description, pr.BasePrice)
+}
+
+func printProducts(products []Product) {
+	for _, pr := range products {
+		fmt.Println(pr.toString())
+		fmt.Println("--------")
+	}
+}
+
 func addProduct(products *[]Product) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -56,7 +68,9 @@ func addProduct(products *[]Product) {
 
 func main() {
 	reader := bufio.NewReader(os.Stdin)
-	all_products := []Product{}
+	all_products := []Product{{"Колбаса", "Очень-очень вкусная", 167},
+		{"Батарейки АА", "Максимально долговечные", 349},
+		{"Вода 0,5 литра", "Черноголовка, негазированная", 19}}
 	for {
 		fmt.Println("Меню команд:")
 		fmt.Println("1 - Вывести весь ассортимент")
@@ -75,7 +89,7 @@ func main() {
 		case 0:
 			return
 		case 1:
-			//
+			printProducts(all_products)
 		case 2:
 			addProduct(&all_products)
 		default:
