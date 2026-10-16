@@ -55,14 +55,44 @@ func addProduct(products *[]Product) {
 		fmt.Println("Введите цену товара:")
 		input, err3 := reader.ReadString('\n')
 		input = strings.TrimSpace(input)
-		price, err3 := strconv.ParseFloat(input, 64)
+		price, err4 := strconv.ParseFloat(input, 64)
 
-		if err1 != nil || err2 != nil || err3 != nil {
+		if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
 			fmt.Println("Ошибка ввода данных!")
 			continue
 		}
 		*products = append(*products, Product{name, description, price})
 		break
+	}
+}
+
+func WithDiscount(percent float64) PriceModifier {
+	return func(price float64) float64 {
+		return price * (1 - percent/100)
+	}
+}
+
+func sale(products []Product) {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Println("Введите скидку на товары во время распродажи:")
+		input, err1 := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
+		percent, err2 := strconv.ParseFloat(input, 64)
+		if err1 != nil || err2 != nil {
+			continue
+		}
+
+		discounted_products := make([]Product, len(products))
+		copy(discounted_products, products)
+
+		discount := WithDiscount(percent)
+		for i := range discounted_products {
+			discounted_products[i].BasePrice = discount(discounted_products[i].BasePrice)
+		}
+		fmt.Println("Цены после применения скидок:")
+		printProducts(discounted_products)
+		return
 	}
 }
 
@@ -75,6 +105,7 @@ func main() {
 		fmt.Println("Меню команд:")
 		fmt.Println("1 - Вывести весь ассортимент")
 		fmt.Println("2 - Добавить товар в ассортимент")
+		fmt.Println("3 - Объявить распродажу и вывести цены на товары со скидкой")
 		fmt.Println("0 - Закончить работу")
 		fmt.Println("Выберите пункт из меню управления: ")
 		input, _ := reader.ReadString('\n')
@@ -92,6 +123,8 @@ func main() {
 			printProducts(all_products)
 		case 2:
 			addProduct(&all_products)
+		case 3:
+			sale(all_products)
 		default:
 			fmt.Println("Нет такого пункта меню!")
 		}
