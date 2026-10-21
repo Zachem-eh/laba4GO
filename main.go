@@ -21,12 +21,16 @@ func clearScreen() {
 	cmd.Run()
 }
 
-type PriceModifier func(float64) float64
-
 type Product struct {
 	Name        string
 	Description string
 	BasePrice   float64
+}
+
+// Добавлена структура Order, которая содержит список товаров и их итоговую цену
+type Order struct {
+	Items      []Product
+	FinalPrice float64
 }
 
 func (pr Product) toString() string {
@@ -35,10 +39,11 @@ func (pr Product) toString() string {
 }
 
 func printProducts(products []Product) {
+	fmt.Println("\n--- Ассортимент ---") // Использвование интерфейса Stringer
 	for _, pr := range products {
 		fmt.Println(pr.toString())
-		fmt.Println("--------")
 	}
+	fmt.Println("---------------")
 }
 
 func addProduct(products *[]Product) {
@@ -66,46 +71,16 @@ func addProduct(products *[]Product) {
 	}
 }
 
-func WithDiscount(percent float64) PriceModifier {
-	return func(price float64) float64 {
-		return price * (1 - percent/100)
-	}
-}
-
-func sale(products []Product) {
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Println("Введите скидку на товары во время распродажи:")
-		input, err1 := reader.ReadString('\n')
-		input = strings.TrimSpace(input)
-		percent, err2 := strconv.ParseFloat(input, 64)
-		if err1 != nil || err2 != nil {
-			continue
-		}
-
-		discounted_products := make([]Product, len(products))
-		copy(discounted_products, products)
-
-		discount := WithDiscount(percent)
-		for i := range discounted_products {
-			discounted_products[i].BasePrice = discount(discounted_products[i].BasePrice)
-		}
-		fmt.Println("Цены после применения скидок:")
-		printProducts(discounted_products)
-		return
-	}
-}
-
 func main() {
 	reader := bufio.NewReader(os.Stdin)
 	all_products := []Product{{"Колбаса", "Очень-очень вкусная", 167},
-		{"Батарейки АА", "Максимально долговечные", 349},
+		{"Батарейки АА", "Максимально долгoвечные", 349},
 		{"Вода 0,5 литра", "Черноголовка, негазированная", 19}}
 	for {
 		fmt.Println("Меню команд:")
 		fmt.Println("1 - Вывести весь ассортимент")
 		fmt.Println("2 - Добавить товар в ассортимент")
-		fmt.Println("3 - Объявить распродажу и вывести цены на товары со скидкой")
+		fmt.Println("3 - Добавить модификаторы цены для товара")
 		fmt.Println("0 - Закончить работу")
 		fmt.Println("Выберите пункт из меню управления: ")
 		input, _ := reader.ReadString('\n')
@@ -124,7 +99,61 @@ func main() {
 		case 2:
 			addProduct(&all_products)
 		case 3:
-			sale(all_products)
+			clearScreen()
+			fmt.Println("Спискок товаров:")
+			for i := 0; i < len(all_products); i++ {
+				fmt.Println("Товар №", i+1, "\nНазвание товара: ", all_products[i].Name, "\nЦена на товар: ", all_products[i].BasePrice)
+			}
+			fmt.Println("Выбирете товар для модификации цены: ")
+			reader := bufio.NewReader(os.Stdin)
+			input, err1 := reader.ReadString('\n')
+			input = strings.TrimSpace(input)
+			productIndex, err2 := strconv.Atoi(input)
+			if err1 != nil || err2 != nil {
+				fmt.Println("Некорректный ввод!")
+			}
+			if productIndex < 1 || productIndex > len(all_products) {
+				fmt.Println("Некорректный номер товара!")
+				break
+			}
+			clearScreen()
+			fmt.Println("Товар №", productIndex, "\nНазвание товара: ", all_products[productIndex-1].Name, "\nЦена на товар: ", all_products[productIndex-1].BasePrice)
+			fmt.Println("Укажите процент скидки для товара: ")
+			discount, err1 := reader.ReadString('\n')
+			discount = strings.TrimSpace(discount)
+
+			fmt.Println("Укажите процент налога для товара: ")
+			Tax, err2 := reader.ReadString('\n')
+			Tax = strings.TrimSpace(Tax)
+
+			fmt.Println("Укажите до скольки знаков округлить: ")
+			Rounding, err3 := reader.ReadString('\n')
+			Rounding = strings.TrimSpace(Rounding)
+
+			fmt.Println("Укажите минимальную цену для товара: ")
+			MinimumPrice, err4 := reader.ReadString('\n')
+			MinimumPrice = strings.TrimSpace(MinimumPrice)
+			if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
+				fmt.Println("Некорректный ввод!")
+				break
+			}
+			discountValue, discountErr := strconv.ParseFloat(discount, 64)
+			taxValue, taxErr := strconv.ParseFloat(Tax, 64)
+			roundingValue, roundingErr := strconv.Atoi(Rounding)
+			minimumPriceValue, minimumPriceErr := strconv.ParseFloat(MinimumPrice, 64)
+			if discountErr != nil || taxErr != nil || roundingErr != nil || minimumPriceErr != nil || roundingValue <= 0 {
+				fmt.Println("Некорректный ввод!")
+				break
+			}
+			chain := CombineModifiers(
+				WithDiscount(discountValue),
+				WithTax(taxValue),
+				WithRounding(roundingValue),
+				WithMinimumPrice(minimumPriceValue),
+			)
+			fmt.Println("\n")
+			all_products[productIndex-1].BasePrice = chain(all_products[productIndex-1].BasePrice)
+			fmt.Printf("%s -> Новая цена: %.2f руб.\n", all_products[productIndex-1].Name, chain(all_products[productIndex-1].BasePrice))
 		default:
 			fmt.Println("Нет такого пункта меню!")
 		}
