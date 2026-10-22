@@ -4,6 +4,13 @@ import "math"
 
 type PriceModifierFunc func(float64) float64
 
+func floatEqual(a, b float64) bool {
+	const eps = 1e-9
+	diff := math.Abs(a - b)
+	scale := math.Max(math.Abs(a), math.Abs(b))
+	return diff <= eps*math.Max(1, scale)
+}
+
 func WithDiscount(percent float64) PriceModifierFunc {
 	return func(price float64) float64 {
 		return price * (1 - percent/100)
@@ -22,7 +29,7 @@ func WithRounding(precision int) PriceModifierFunc {
 }
 func WithMinimumPrice(minPrice float64) PriceModifierFunc {
 	return func(price float64) float64 {
-		if price < minPrice {
+		if !floatEqual(price, minPrice) && price < minPrice {
 			return minPrice
 		}
 		return price
