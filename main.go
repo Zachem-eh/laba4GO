@@ -22,6 +22,7 @@ func clearScreen() {
 }
 
 type Product struct {
+	ID          uint
 	Name        string
 	Description string
 	BasePrice   float64
@@ -34,17 +35,18 @@ type Order struct {
 }
 
 func (pr Product) toString() string {
-	return fmt.Sprintf("Название товара: %s\nОписание товара: %s\nЦена на товар: %v",
-		pr.Name, pr.Description, pr.BasePrice)
+	return fmt.Sprintf("ID товара: %d\nНазвание товара: %s\nОписание товара: %s\nЦена на товар: %v",
+		pr.ID, pr.Name, pr.Description, pr.BasePrice)
 }
 
 func printProducts(products []Product) {
-	fmt.Println("\n--- Ассортимент ---") // Использвование интерфейса Stringer
 	for _, pr := range products {
 		fmt.Println(pr.toString())
+		fmt.Println("---------------")
 	}
-	fmt.Println("---------------")
 }
+
+var NEXT_ID uint = 4
 
 func addProduct(products *[]Product) {
 	reader := bufio.NewReader(os.Stdin)
@@ -66,16 +68,36 @@ func addProduct(products *[]Product) {
 			fmt.Println("Ошибка ввода данных!")
 			continue
 		}
-		*products = append(*products, Product{name, description, price})
+		*products = append(*products, Product{
+			ID:          NEXT_ID,
+			Name:        name,
+			Description: description,
+			BasePrice:   price,
+		})
+		NEXT_ID++
 		break
 	}
 }
 
+func findProductByID(products []Product, id int) (int, error) {
+	if id >= int(NEXT_ID) || id < 1 {
+		return -1, fmt.Errorf("товар с ID %d не найден", id)
+	}
+	for i, p := range products {
+		if int(p.ID) == id {
+			return i, nil // успех — nil
+		}
+	}
+	return -1, fmt.Errorf("товар с ID %d не найден", id)
+}
+
 func main() {
 	reader := bufio.NewReader(os.Stdin)
-	all_products := []Product{{"Колбаса", "Очень-очень вкусная", 167},
-		{"Батарейки АА", "Максимально долгoвечные", 349},
-		{"Вода 0,5 литра", "Черноголовка, негазированная", 19}}
+	all_products := []Product{
+		{ID: 1, Name: "Колбаса", Description: "Очень-очень вкусная", BasePrice: 167},
+		{ID: 2, Name: "Батарейки АА", Description: "Максимально долговечные", BasePrice: 349},
+		{ID: 3, Name: "Вода 0,5 литра", Description: "Черноголовка, негазированная", BasePrice: 19},
+	}
 	for {
 		fmt.Println("Меню команд:")
 		fmt.Println("1 - Вывести весь ассортимент")
@@ -95,29 +117,30 @@ func main() {
 		case 0:
 			return
 		case 1:
+			fmt.Println("\n--- Ассортимент ---")
 			printProducts(all_products)
 		case 2:
 			addProduct(&all_products)
 		case 3:
 			clearScreen()
 			fmt.Println("Спискок товаров:")
-			for i := 0; i < len(all_products); i++ {
-				fmt.Println("Товар №", i+1, "\nНазвание товара: ", all_products[i].Name, "\nЦена на товар: ", all_products[i].BasePrice)
-			}
-			fmt.Println("Выбирете товар для модификации цены: ")
+			printProducts(all_products)
+			fmt.Println("Выбирете товар для модификации цены (введите ID): ")
 			reader := bufio.NewReader(os.Stdin)
 			input, err1 := reader.ReadString('\n')
 			input = strings.TrimSpace(input)
-			productIndex, err2 := strconv.Atoi(input)
+			productId, err2 := strconv.Atoi(input)
 			if err1 != nil || err2 != nil {
 				fmt.Println("Некорректный ввод!")
+				break
 			}
-			if productIndex < 1 || productIndex > len(all_products) {
-				fmt.Println("Некорректный номер товара!")
+			productIndex, err_ind := findProductByID(all_products, productId)
+			if err_ind != nil {
+				fmt.Println(err_ind)
 				break
 			}
 			clearScreen()
-			fmt.Println("Товар №", productIndex, "\nНазвание товара: ", all_products[productIndex-1].Name, "\nЦена на товар: ", all_products[productIndex-1].BasePrice)
+			fmt.Println(all_products[productIndex].toString() + "\n")
 			fmt.Println("Укажите процент скидки для товара: ")
 			discount, err1 := reader.ReadString('\n')
 			discount = strings.TrimSpace(discount)
@@ -152,8 +175,8 @@ func main() {
 				WithMinimumPrice(minimumPriceValue),
 			)
 			fmt.Println("\n")
-			all_products[productIndex-1].BasePrice = chain(all_products[productIndex-1].BasePrice)
-			fmt.Printf("%s -> Новая цена: %.2f руб.\n", all_products[productIndex-1].Name, chain(all_products[productIndex-1].BasePrice))
+			all_products[productIndex].BasePrice = chain(all_products[productIndex].BasePrice)
+			fmt.Printf("%s -> Новая цена: %.2f руб.\n", all_products[productIndex].Name, all_products[productIndex].BasePrice)
 		default:
 			fmt.Println("Нет такого пункта меню!")
 		}
