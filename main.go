@@ -36,15 +36,14 @@ type Order struct {
 
 func printProducts(products []Product) {
 	for _, pr := range products {
-		fmt.Println(pr.String())
+		fmt.Println(pr)
 		fmt.Println("---------------")
 	}
 }
 
 var NEXT_ID uint = 4
 
-func addProduct(products *[]Product) {
-	reader := bufio.NewReader(os.Stdin)
+func addProduct(reader *bufio.Reader, products *[]Product) {
 	for {
 		fmt.Println("Введите название товара:")
 		name, err1 := reader.ReadString('\n')
@@ -59,8 +58,12 @@ func addProduct(products *[]Product) {
 		input = strings.TrimSpace(input)
 		price, err4 := strconv.ParseFloat(input, 64)
 
-		if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
+		if err1 != nil || err2 != nil || err3 != nil {
 			fmt.Println("Ошибка ввода данных!")
+			return
+		}
+		if err4 != nil || price < 0 {
+			fmt.Println("Некорректная цена!")
 			continue
 		}
 		*products = append(*products, Product{
@@ -98,9 +101,13 @@ func main() {
 		fmt.Println("1 - Вывести весь ассортимент")
 		fmt.Println("2 - Добавить товар в ассортимент")
 		fmt.Println("3 - Добавить модификаторы цены для товара")
+		fmt.Println("4 - Оформить заказ")
 		fmt.Println("0 - Закончить работу")
 		fmt.Println("Выберите пункт из меню управления: ")
-		input, _ := reader.ReadString('\n')
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			return
+		}
 		input = strings.TrimSpace(input)
 		a, err := strconv.Atoi(input)
 		if err != nil {
@@ -115,13 +122,12 @@ func main() {
 			fmt.Println("\n--- Ассортимент ---")
 			printProducts(all_products)
 		case 2:
-			addProduct(&all_products)
+			addProduct(reader, &all_products)
 		case 3:
 			clearScreen()
 			fmt.Println("Спискок товаров:")
 			printProducts(all_products)
 			fmt.Println("Выбирете товар для модификации цены (введите ID): ")
-			reader := bufio.NewReader(os.Stdin)
 			input, err1 := reader.ReadString('\n')
 			input = strings.TrimSpace(input)
 			productId, err2 := strconv.Atoi(input)
@@ -140,10 +146,6 @@ func main() {
 			discount, err1 := reader.ReadString('\n')
 			discount = strings.TrimSpace(discount)
 
-			fmt.Println("Укажите процент налога для товара: ")
-			Tax, err2 := reader.ReadString('\n')
-			Tax = strings.TrimSpace(Tax)
-
 			fmt.Println("Укажите до скольки знаков округлить: ")
 			Rounding, err3 := reader.ReadString('\n')
 			Rounding = strings.TrimSpace(Rounding)
@@ -151,27 +153,31 @@ func main() {
 			fmt.Println("Укажите минимальную цену для товара: ")
 			MinimumPrice, err4 := reader.ReadString('\n')
 			MinimumPrice = strings.TrimSpace(MinimumPrice)
-			if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
+			if err1 != nil || err3 != nil || err4 != nil {
 				fmt.Println("Некорректный ввод!")
 				break
 			}
 			discountValue, discountErr := strconv.ParseFloat(discount, 64)
-			taxValue, taxErr := strconv.ParseFloat(Tax, 64)
 			roundingValue, roundingErr := strconv.Atoi(Rounding)
 			minimumPriceValue, minimumPriceErr := strconv.ParseFloat(MinimumPrice, 64)
-			if discountErr != nil || taxErr != nil || roundingErr != nil || minimumPriceErr != nil || roundingValue <= 0 {
+			if discountErr != nil || roundingErr != nil || minimumPriceErr != nil ||
+				discountValue < 0 || discountValue > 100 || roundingValue < 0 {
 				fmt.Println("Некорректный ввод!")
 				break
 			}
+			// Налог здесь не применяется: цены в ассортименте хранятся без НДС,
+			// НДС (vatPercent) добавляется при оформлении заказа в order.go.
 			chain := CombineModifiers(
 				WithDiscount(discountValue),
-				WithTax(taxValue),
 				WithRounding(roundingValue),
 				WithMinimumPrice(minimumPriceValue),
 			)
-			fmt.Println("\n")
+			fmt.Println()
 			all_products[productIndex].BasePrice = chain(all_products[productIndex].BasePrice)
 			fmt.Printf("%s -> Новая цена: %.2f руб.\n", all_products[productIndex].Name, all_products[productIndex].BasePrice)
+		case 4:
+			clearScreen()
+			makeOrder(reader, all_products)
 		default:
 			fmt.Println("Нет такого пункта меню!")
 		}
