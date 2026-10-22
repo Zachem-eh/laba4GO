@@ -34,14 +34,9 @@ type Order struct {
 	FinalPrice float64
 }
 
-func (pr Product) toString() string {
-	return fmt.Sprintf("ID товара: %d\nНазвание товара: %s\nОписание товара: %s\nЦена на товар: %v",
-		pr.ID, pr.Name, pr.Description, pr.BasePrice)
-}
-
 func printProducts(products []Product) {
 	for _, pr := range products {
-		fmt.Println(pr.toString())
+		fmt.Println(pr.String())
 		fmt.Println("---------------")
 	}
 }
@@ -140,7 +135,7 @@ func main() {
 				break
 			}
 			clearScreen()
-			fmt.Println(all_products[productIndex].toString() + "\n")
+			fmt.Println(all_products[productIndex].String() + "\n")
 			fmt.Println("Укажите процент скидки для товара: ")
 			discount, err1 := reader.ReadString('\n')
 			discount = strings.TrimSpace(discount)

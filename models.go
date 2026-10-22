@@ -4,7 +4,8 @@ package main
 import "fmt"
 
 func (p Product) String() string {
-	return "Товар: " + p.Name + "\nОписание товара: " + p.Description + "\nЦена на товар: " + fmt.Sprint("%v", p.BasePrice)
+	return fmt.Sprintf("ID товара: %d\nНазвание товара: %s\nОписание товара: %s\nЦена на товар: %v",
+		p.ID, p.Name, p.Description, p.BasePrice)
 }
 func (o Order) String() string {
 	result := "\n--- Чек заказа ---\n"
